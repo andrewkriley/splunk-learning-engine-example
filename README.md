@@ -1,4 +1,4 @@
-# example-splunk-learning-engine
+# splunk-learning-engine-example
 
 A **concept tool** that demonstrates how AI can read **publicly available** Splunk documentation and training outlines, then turn that research into a structured browser-based learning resource: topic paths, practice questions, timed review, and an SPL glossary with doc links.
 
@@ -38,8 +38,8 @@ npm -v
 ## Install
 
 ```bash
-git clone <your-repo-url> example-splunk-learning-engine
-cd example-splunk-learning-engine
+git clone https://github.com/andrewkriley/splunk-learning-engine-example.git
+cd splunk-learning-engine-example
 npm ci
 ```
 
