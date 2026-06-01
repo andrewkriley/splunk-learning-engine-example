@@ -46,6 +46,19 @@ npm ci
 
 Use `npm ci` so versions match `package-lock.json`. On a fresh fork without a lockfile, run `npm install` once and commit the result.
 
+## Sample data (for labs)
+
+Hands-on labs expect synthetic web logs in a **`sample`** index. Files and ingest steps:
+
+**[sample-data/README.md](sample-data/README.md)**
+
+```bash
+# optional: regenerate logs (already committed in repo)
+npm run generate:sample-data
+```
+
+Upload `sample-data/web_access.log` and `legacy_web.log` via **Settings → Add Data → Upload** in Splunk, then run lab SPL such as `index=sample sourcetype=web_access`.
+
 ## Run locally
 
 Development server (hot reload):

@@ -13,7 +13,7 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
   environmentSetup: [
     'Splunk Enterprise or Splunk Cloud with permission to run searches and create knowledge objects (macros, tags, field aliases, etc.).',
     'Ability to open Search & Reporting and Settings → Knowledge.',
-    'Sample data loaded (e.g. tutorial data, `_internal`, or your org’s dev index). If you lack sample data, use `index=_internal` and adjust time range to Last 24 hours.',
+    'Sample data in this repo: see `sample-data/README.md`. Upload `web_access.log` and `legacy_web.log` into index `sample` (recommended), then use time range All time or 22–29 May 2026 UTC.',
     'A dedicated app context is optional but recommended (e.g. Search app or a personal dev app) so knowledge objects are easy to find later.',
   ],
   scenarios: [
@@ -35,13 +35,13 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         'Comfort with basic search (index/sourcetype, time range).',
       ],
       environmentNotes: [
-        'Replace `index=main` with an index that has steady event volume in your environment.',
+        'After loading repo sample data, use `index=sample`. Or change `index=sample` in SPL to your own index name.',
       ],
       steps: [
         {
           title: 'Baseline event volume over time',
           body: 'Open Search & Reporting. Set a 24-hour window. Run a search that returns events in your chosen index, then pipe to timechart to count events per hour.',
-          spl: 'index=main | timechart count',
+          spl: 'index=sample | timechart count',
           hint: 'If the chart is empty, widen the time range or pick a busier index.',
           checkpoint:
             'You see a time-series chart with _time on the X-axis and a count series.',
@@ -49,20 +49,20 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Split a metric by a field',
           body: 'Add a split-by field common in your data (e.g. status, action, or sourcetype). Limit series if the legend is crowded.',
-          spl: 'index=main | timechart count by status',
+          spl: 'index=sample | timechart count by status',
           checkpoint:
             'Multiple series appear (or one series if the field has a single value)—legend matches field values.',
         },
         {
           title: 'Control bucket width',
           body: 'Repeat with an explicit span (e.g. 15 minutes or 1 hour) and note how granularity changes.',
-          spl: 'index=main | timechart span=15m count by status',
+          spl: 'index=sample | timechart span=15m count by status',
           checkpoint: 'Changing span visibly changes the number of time buckets.',
         },
         {
           title: 'Non-time chart',
           body: 'Use chart to compare categories without _time on the X axis—for example top values of a field by count.',
-          spl: 'index=main | chart count by status',
+          spl: 'index=sample | chart count by status',
           checkpoint:
             'You have a tabular/chart result where rows or columns represent field values, not time buckets.',
         },
@@ -104,26 +104,26 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Filter events',
           body: 'Start from a broad search. Add where to keep only events matching a condition (status code, log level, or numeric threshold).',
-          spl: 'index=main | where status>=400',
+          spl: 'index=sample | where status>=400',
           hint: 'If status does not exist, use another field or `where linecount>1`.',
           checkpoint: 'Event count drops compared to the search without where.',
         },
         {
           title: 'Derive a field with eval',
           body: 'Use eval to compute a new field (category label, rounded number, or concatenation).',
-          spl: 'index=main | eval size_bucket=if(bytes<1000,"small","large") | table _time, bytes, size_bucket',
+          spl: 'index=sample | eval size_bucket=if(bytes<1000,"small","large") | table _time, bytes, size_bucket',
           checkpoint: 'The new field appears in results with expected values.',
         },
         {
           title: 'Conditional values',
           body: 'Use case() or if() in eval to map ranges to labels (e.g. HTTP status families).',
-          spl: 'index=main | eval status_family=case(status<200,"1xx",status<300,"2xx",status<400,"3xx",status<500,"4xx",1=1,"5xx") | stats count by status_family',
+          spl: 'index=sample | eval status_family=case(status<200,"1xx",status<300,"2xx",status<400,"3xx",status<500,"4xx",1=1,"5xx") | stats count by status_family',
           checkpoint: 'stats shows buckets that match your eval logic.',
         },
         {
           title: 'Format for presentation',
           body: 'Use table or fields to show only columns needed for a report; optionally rename with eval before table.',
-          spl: 'index=main | eval KB=round(bytes/1024,2) | table _time, host, status, KB',
+          spl: 'index=sample | eval KB=round(bytes/1024,2) | table _time, host, status, KB',
           checkpoint: 'Output is a concise table suitable for export or a report.',
         },
       ],
@@ -157,28 +157,28 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Find a correlation field',
           body: 'Run a search and identify a field that ties related events (web session, transaction ID). Use stats to see cardinality.',
-          spl: 'index=main | stats dc(sessionid) AS sessions, count by sessionid | sort - count | head 10',
+          spl: 'index=sample | stats dc(sessionid) AS sessions, count by sessionid | sort - count | head 10',
           hint: 'Swap sessionid for a field present in your data.',
           checkpoint: 'You have a field with multiple events per value suitable for grouping.',
         },
         {
           title: 'Create transactions',
           body: 'Pipe to transaction with that field. Inspect eventcount and duration fields on each transaction row.',
-          spl: 'index=main | transaction sessionid maxspan=30m | table _time, sessionid, eventcount, duration',
+          spl: 'index=sample | transaction sessionid maxspan=30m | table _time, sessionid, eventcount, duration',
           checkpoint:
             'Each row represents a group of events; eventcount > 1 for at least some rows.',
         },
         {
           title: 'Tune time bounds',
           body: 'Adjust maxspan or maxpause and observe how transaction count changes.',
-          spl: 'index=main | transaction sessionid maxspan=5m | stats count AS txn_count, avg(eventcount) AS avg_events',
+          spl: 'index=sample | transaction sessionid maxspan=5m | stats count AS txn_count, avg(eventcount) AS avg_events',
           checkpoint:
             'You can explain why stricter bounds yield more, shorter transactions.',
         },
         {
           title: 'Compare to stats',
           body: 'Answer the same business question with stats instead of transaction (e.g. events per session). Note when you lose per-event detail.',
-          spl: 'index=main | stats count AS events by sessionid | stats avg(events) AS avg_events_per_session',
+          spl: 'index=sample | stats count AS events by sessionid | stats avg(events) AS avg_events_per_session',
           checkpoint:
             'You can state one use case for transaction (drilldown to member events) vs stats alone.',
         },
@@ -213,13 +213,13 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Inspect _raw',
           body: 'Run a search that shows _raw. Pick a repeating pattern (IP, status code, key=value).',
-          spl: 'index=main | head 5 | table _raw',
+          spl: 'index=sample | head 5 | table _raw',
           checkpoint: 'You identified a substring to capture as a field.',
         },
         {
           title: 'Extract with rex',
           body: 'Use rex with a named group to populate a field at search time.',
-          spl: 'index=main | rex field=_raw "(?<http_status>\\d{3})" | stats count by http_status',
+          spl: 'index=sample | rex field=_raw "(?<http_status>\\d{3})" | stats count by http_status',
           hint: 'Adjust the regex to match your log format.',
           checkpoint: 'http_status (or your field) is populated for matching events.',
         },
@@ -283,7 +283,7 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Search without inline SPL',
           body: 'Run a simple reporting search using only the alias and calculated field names.',
-          spl: 'index=main | stats count by ip, size_kb',
+          spl: 'index=sample | stats count by ip, size_kb',
           hint: 'Rename fields to match what you configured.',
           checkpoint: 'Report works with knowledge objects applied automatically.',
         },
@@ -332,7 +332,7 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Use the macro',
           body: 'Invoke with backticks in a search. If you added arguments, pass them per macro syntax for your version.',
-          spl: 'index=main | `summ_errors`',
+          spl: 'index=sample | `summ_errors`',
           hint: 'Macro name must match exactly; use Settings to copy invocation syntax.',
           checkpoint: 'Search runs and returns the same shape as the macro definition piped after your base search.',
         },

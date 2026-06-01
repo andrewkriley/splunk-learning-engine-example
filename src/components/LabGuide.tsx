@@ -247,6 +247,13 @@ export function LabGuideView(props: {
 
       <div className="card lab-setup">
         <h2 style={{ marginTop: 0 }}>Environment setup</h2>
+        <p className="muted">
+          Download sample logs from the repo{' '}
+          <code>sample-data/</code> folder (
+          <code>web_access.log</code>, <code>legacy_web.log</code>). See{' '}
+          <code>sample-data/README.md</code> for upload steps into index{' '}
+          <code>sample</code>.
+        </p>
         <ul className="links">
           {guide.environmentSetup.map((item) => (
             <li key={item}>{item}</li>

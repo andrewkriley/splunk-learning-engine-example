@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-06-01T07:00:26.858Z",
+  "recommendedIndex": "sample",
+  "files": [
+    {
+      "file": "web_access.log",
+      "sourcetype": "web_access",
+      "eventCount": 650,
+      "fields": [
+        "host",
+        "status",
+        "bytes",
+        "sessionid",
+        "client_ip",
+        "user",
+        "method",
+        "uri",
+        "action"
+      ]
+    },
+    {
+      "file": "legacy_web.log",
+      "sourcetype": "legacy_web",
+      "eventCount": 120,
+      "fields": [
+        "host",
+        "status",
+        "bytes",
+        "sessionid",
+        "ip_addr",
+        "user",
+        "method",
+        "uri",
+        "action"
+      ],
+      "note": "Uses ip_addr instead of client_ip for field-alias exercises."
+    }
+  ],
+  "timeRangeHint": "Events span roughly 22–29 May 2026 UTC. Use All time or that window after ingest."
+}

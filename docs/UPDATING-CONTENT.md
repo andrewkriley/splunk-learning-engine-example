@@ -27,6 +27,8 @@ Paths with interactive content today: `core-user`, `core-power-user`, `core-adva
 
 **Lab guides** (hands-on): `core-power-user` only today — see `src/data/labs/powerUserLabs.ts` and register new paths in `src/data/labs/index.ts`.
 
+**Sample data** for labs: `sample-data/*.log` (generate with `npm run generate:sample-data`). Lab SPL uses `index=sample` by default.
+
 ---
 
 ## Workflow E: Add or extend lab scenarios
