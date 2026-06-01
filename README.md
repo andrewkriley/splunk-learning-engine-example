@@ -12,6 +12,7 @@ This repository is **not** an official Splunk product, certification prep servic
 | Structure from outlines | Topic domains and weights follow publicly listed learning objectives—not proprietary exam banks |
 | Human-in-the-loop | Every answer should be checked against **official Splunk documentation** before you rely on it |
 | Repeatable workflow | TypeScript data files + prompts in [docs/UPDATING-CONTENT.md](docs/UPDATING-CONTENT.md) so you can regenerate or extend content with your own AI tools |
+| Hands-on practice | **Lab guides** walk through real scenarios in your Splunk instance (Core Power User first) |
 
 ## Important: validate everything
 
@@ -87,7 +88,8 @@ src/
     questions/            # Multiple-choice banks per path (AI-drafted, human-verify)
     glossary/             # SPL reference sections and entries
     trackResources.ts     # Wires path id → questions + domains
-  components/             # React UI
+    labs/                 # Hands-on lab scenarios per path
+  components/             # React UI (includes LabGuide)
   lib/                    # Selection, storage, progress
 docs/
   UPDATING-CONTENT.md     # Extend content with your own AI harness

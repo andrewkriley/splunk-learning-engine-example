@@ -33,8 +33,9 @@ export function LearningFlow(props: {
   onMainMenu: () => void
   onChangePath: () => void
   onOpenGlossary: () => void
+  onOpenLabGuide?: () => void
 }) {
-  const { trackId, onMainMenu, onChangePath, onOpenGlossary } = props
+  const { trackId, onMainMenu, onChangePath, onOpenGlossary, onOpenLabGuide } = props
 
   const track = useMemo(() => resolveLearningTrack(trackId), [trackId])
   const { stats, record, reset } = useTrackProgress(trackId)
@@ -429,10 +430,15 @@ export function LearningFlow(props: {
               : path.shortDescription}
           </p>
         </div>
-        <div className="row">
+        <div className="row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
           <button type="button" className="btn primary" onClick={onOpenGlossary}>
             SPL reference
           </button>
+          {onOpenLabGuide && (
+            <button type="button" className="btn primary" onClick={onOpenLabGuide}>
+              Lab guide
+            </button>
+          )}
         </div>
       </div>
 
@@ -510,6 +516,19 @@ export function LearningFlow(props: {
               Reset track stats
             </button>
           </div>
+
+          {onOpenLabGuide && (
+            <div className="card">
+              <h2>Hands-on labs</h2>
+              <p className="muted">
+                Seven guided scenarios in your Splunk instance—transforming commands,
+                knowledge objects, correlation, and data models—with checkpoints per step.
+              </p>
+              <button type="button" className="btn primary" onClick={onOpenLabGuide}>
+                Open Power User lab guide
+              </button>
+            </div>
+          )}
 
           <div className="card">
             <h2>Practice</h2>
