@@ -13,6 +13,8 @@ export interface LabStep {
   body: string
   /** Optional SPL to run or adapt */
   spl?: string
+  /** What each search segment or pipe command contributes to the output */
+  splBreakdown?: { segment: string; role: string }[]
   /** Optional nudge without giving away the answer */
   hint?: string
   /** Confirm this before advancing—hands-on checkpoint */

@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-06-01T07:00:26.858Z",
-  "recommendedIndex": "sample",
+  "recommendedIndex": "splunk_learning_engine",
   "files": [
     {
       "file": "web_access.log",

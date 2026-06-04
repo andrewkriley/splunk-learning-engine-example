@@ -157,7 +157,7 @@ writeFileSync(join(OUT_DIR, 'legacy_web.log'), legacyLines.join('\n') + '\n', 'u
 // --- manifest for docs ---
 const manifest = {
   generatedAt: new Date().toISOString(),
-  recommendedIndex: 'sample',
+  recommendedIndex: 'splunk_learning_engine',
   files: [
     {
       file: 'web_access.log',

@@ -83,9 +83,28 @@ function LabScenarioDetail(props: {
               </label>
               <p className="lab-step-body">{step.body}</p>
               {step.spl && (
-                <pre className="glossary-example lab-spl">
-                  <code>{step.spl}</code>
-                </pre>
+                <>
+                  <pre className="glossary-example lab-spl">
+                    <code>{step.spl}</code>
+                  </pre>
+                  {step.splBreakdown && step.splBreakdown.length > 0 && (
+                    <div className="lab-spl-breakdown">
+                      <p className="lab-spl-breakdown-title">
+                        <strong>What this SPL does</strong>
+                      </p>
+                      <dl className="lab-spl-dl">
+                        {step.splBreakdown.map((part) => (
+                          <div key={part.segment} className="lab-spl-part">
+                            <dt>
+                              <code>{part.segment}</code>
+                            </dt>
+                            <dd>{part.role}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                </>
               )}
               {step.hint && (
                 <p className="muted lab-hint">
@@ -252,7 +271,7 @@ export function LabGuideView(props: {
           <code>sample-data/</code> folder (
           <code>web_access.log</code>, <code>legacy_web.log</code>). See{' '}
           <code>sample-data/README.md</code> for upload steps into index{' '}
-          <code>sample</code>.
+          <code>splunk_learning_engine</code>.
         </p>
         <ul className="links">
           {guide.environmentSetup.map((item) => (

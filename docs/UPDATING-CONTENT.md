@@ -27,7 +27,7 @@ Paths with interactive content today: `core-user`, `core-power-user`, `core-adva
 
 **Lab guides** (hands-on): `core-power-user` only today — see `src/data/labs/powerUserLabs.ts` and register new paths in `src/data/labs/index.ts`.
 
-**Sample data** for labs: `sample-data/*.log` (generate with `npm run generate:sample-data`). Lab SPL uses `index=sample` by default.
+**Sample data** for labs: `sample-data/*.log` (generate with `npm run generate:sample-data`). Lab SPL uses `index=splunk_learning_engine` by default.
 
 ---
 
@@ -60,7 +60,11 @@ Lab content is separate from multiple-choice banks. Each scenario is a guided ex
     {
       title: 'Step title',
       body: 'Instructions for Splunk UI or SPL.',
-      spl: 'index=main | …',  // optional
+      spl: 'index=splunk_learning_engine | …',  // optional
+      splBreakdown: [  // optional; explain each pipe segment
+        { segment: 'index=splunk_learning_engine', role: '…' },
+        { segment: '| stats count', role: '…' },
+      ],
       hint: '…',              // optional
       checkpoint: 'What the user must confirm before continuing.',
     },

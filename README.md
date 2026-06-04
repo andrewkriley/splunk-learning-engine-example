@@ -48,7 +48,7 @@ Use `npm ci` so versions match `package-lock.json`. On a fresh fork without a lo
 
 ## Sample data (for labs)
 
-Hands-on labs expect synthetic web logs in a **`sample`** index. Files and ingest steps:
+Hands-on labs expect synthetic web logs in a **`splunk_learning_engine`** index. Files and ingest steps:
 
 **[sample-data/README.md](sample-data/README.md)**
 
@@ -57,7 +57,7 @@ Hands-on labs expect synthetic web logs in a **`sample`** index. Files and inges
 npm run generate:sample-data
 ```
 
-Upload `sample-data/web_access.log` and `legacy_web.log` via **Settings → Add Data → Upload** in Splunk, then run lab SPL such as `index=sample sourcetype=web_access`.
+Upload `sample-data/web_access.log` and `legacy_web.log` via **Settings → Add Data → Upload** in Splunk, then run lab SPL such as `index=splunk_learning_engine sourcetype=web_access`.
 
 ## Run locally
 
