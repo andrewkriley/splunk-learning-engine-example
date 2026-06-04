@@ -1,17 +1,27 @@
 import { useCallback, useState } from 'react'
 import './App.css'
 import { GlossaryView } from './components/Glossary'
+import { LabGuidePicker, LabGuideView } from './components/LabGuide'
 import { LearningFlow } from './components/LearningFlow'
 import { LearningPathPicker } from './components/LearningPathPicker'
 import { MainMenu } from './components/MainMenu'
 import { LEARNING_PATHS } from './data/learningPaths'
 
-type AppView = 'main-menu' | 'path-picker' | 'track' | 'glossary'
+type AppView =
+  | 'main-menu'
+  | 'path-picker'
+  | 'track'
+  | 'glossary'
+  | 'lab-picker'
+  | 'lab-guide'
 
 export default function App() {
   const [view, setView] = useState<AppView>('main-menu')
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null)
   const [glossaryReturn, setGlossaryReturn] = useState<'main-menu' | 'track'>(
+    'main-menu',
+  )
+  const [labReturn, setLabReturn] = useState<'main-menu' | 'track' | 'lab-picker'>(
     'main-menu',
   )
 
@@ -34,11 +44,35 @@ export default function App() {
     setView(glossaryReturn === 'track' ? 'track' : 'main-menu')
   }, [glossaryReturn])
 
+  const openLabPicker = useCallback(() => {
+    setLabReturn('main-menu')
+    setView('lab-picker')
+  }, [])
+
+  const openLabFromTrack = useCallback((trackId: string) => {
+    setActiveTrackId(trackId)
+    setLabReturn('track')
+    setView('lab-guide')
+  }, [])
+
+  const openLabFromPicker = useCallback((trackId: string) => {
+    setActiveTrackId(trackId)
+    setLabReturn('lab-picker')
+    setView('lab-guide')
+  }, [])
+
+  const closeLab = useCallback(() => {
+    if (labReturn === 'track') setView('track')
+    else if (labReturn === 'lab-picker') setView('lab-picker')
+    else setView('main-menu')
+  }, [labReturn])
+
   if (view === 'main-menu') {
     return (
       <MainMenu
         onBrowsePaths={() => setView('path-picker')}
         onOpenGlossary={openGlossaryFromMenu}
+        onOpenLabGuides={openLabPicker}
       />
     )
   }
@@ -67,6 +101,32 @@ export default function App() {
     )
   }
 
+  if (view === 'lab-picker') {
+    return (
+      <LabGuidePicker
+        onBack={() => setView('main-menu')}
+        onSelectTrack={openLabFromPicker}
+      />
+    )
+  }
+
+  if (view === 'lab-guide' && activeTrackId) {
+    return (
+      <LabGuideView
+        key={activeTrackId}
+        trackId={activeTrackId}
+        onBack={closeLab}
+        backLabel={
+          labReturn === 'track'
+            ? '← Back to path'
+            : labReturn === 'lab-picker'
+              ? '← Lab guides'
+              : '← Main menu'
+        }
+      />
+    )
+  }
+
   if (view === 'track' && activeTrackId) {
     return (
       <LearningFlow
@@ -77,6 +137,11 @@ export default function App() {
         }}
         onChangePath={() => setView('path-picker')}
         onOpenGlossary={openGlossaryFromTrack}
+        onOpenLabGuide={
+          activeTrackId === 'core-power-user'
+            ? () => openLabFromTrack(activeTrackId)
+            : undefined
+        }
       />
     )
   }
@@ -85,6 +150,7 @@ export default function App() {
     <MainMenu
       onBrowsePaths={() => setView('path-picker')}
       onOpenGlossary={openGlossaryFromMenu}
+      onOpenLabGuides={openLabPicker}
     />
   )
 }

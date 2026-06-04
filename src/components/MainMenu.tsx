@@ -1,8 +1,9 @@
 export function MainMenu(props: {
   onBrowsePaths: () => void
   onOpenGlossary: () => void
+  onOpenLabGuides: () => void
 }) {
-  const { onBrowsePaths, onOpenGlossary } = props
+  const { onBrowsePaths, onOpenGlossary, onOpenLabGuides } = props
 
   return (
     <div className="app main-menu">
@@ -40,6 +41,19 @@ export function MainMenu(props: {
             Help and public documentation.
           </p>
           <span className="main-menu-tile-cta">Open reference →</span>
+        </button>
+
+        <button
+          type="button"
+          className="main-menu-tile card"
+          onClick={onOpenLabGuides}
+        >
+          <h2>Lab guides</h2>
+          <p>
+            Step-by-step hands-on scenarios in your Splunk environment—starting with Core
+            Power User (charts, fields, macros, data models, and more).
+          </p>
+          <span className="main-menu-tile-cta">Open lab guides →</span>
         </button>
       </div>
 

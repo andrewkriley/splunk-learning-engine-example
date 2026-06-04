@@ -12,6 +12,7 @@ This repository is **not** an official Splunk product, certification prep servic
 | Structure from outlines | Topic domains and weights follow publicly listed learning objectives—not proprietary exam banks |
 | Human-in-the-loop | Every answer should be checked against **official Splunk documentation** before you rely on it |
 | Repeatable workflow | TypeScript data files + prompts in [docs/UPDATING-CONTENT.md](docs/UPDATING-CONTENT.md) so you can regenerate or extend content with your own AI tools |
+| Hands-on practice | **Lab guides** walk through real scenarios in your Splunk instance (Core Power User first) |
 
 ## Important: validate everything
 
@@ -44,6 +45,19 @@ npm ci
 ```
 
 Use `npm ci` so versions match `package-lock.json`. On a fresh fork without a lockfile, run `npm install` once and commit the result.
+
+## Sample data (for labs)
+
+Hands-on labs expect synthetic web logs in a **`splunk_learning_engine`** index. Files and ingest steps:
+
+**[sample-data/README.md](sample-data/README.md)**
+
+```bash
+# optional: regenerate logs (already committed in repo)
+npm run generate:sample-data
+```
+
+Upload `sample-data/web_access.log` and `legacy_web.log` via **Settings → Add Data → Upload** in Splunk, then run lab SPL such as `index=splunk_learning_engine sourcetype=web_access`.
 
 ## Run locally
 
@@ -87,7 +101,8 @@ src/
     questions/            # Multiple-choice banks per path (AI-drafted, human-verify)
     glossary/             # SPL reference sections and entries
     trackResources.ts     # Wires path id → questions + domains
-  components/             # React UI
+    labs/                 # Hands-on lab scenarios per path
+  components/             # React UI (includes LabGuide)
   lib/                    # Selection, storage, progress
 docs/
   UPDATING-CONTENT.md     # Extend content with your own AI harness

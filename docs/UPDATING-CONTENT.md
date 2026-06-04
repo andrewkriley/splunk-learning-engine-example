@@ -25,6 +25,72 @@ This guide is for maintainers who use an AI assistant (Cursor, Claude Code, Copi
 
 Paths with interactive content today: `core-user`, `core-power-user`, `core-advanced-power-user`, `splunk-cloud-admin`. Others in `learningPaths.ts` are links-only placeholders.
 
+**Lab guides** (hands-on): `core-power-user` only today — see `src/data/labs/powerUserLabs.ts` and register new paths in `src/data/labs/index.ts`.
+
+**Sample data** for labs: `sample-data/*.log` (generate with `npm run generate:sample-data`). Lab SPL uses `index=splunk_learning_engine` by default.
+
+---
+
+## Workflow E: Add or extend lab scenarios
+
+Lab content is separate from multiple-choice banks. Each scenario is a guided exercise users run in **their own Splunk environment**.
+
+| What you change | Where |
+|-----------------|--------|
+| Power User labs | `src/data/labs/powerUserLabs.ts` |
+| New path lab guide | `src/data/labs/<path>Labs.ts` + entry in `src/data/labs/index.ts` |
+| Types | `src/data/labs/types.ts` |
+| UI | `src/components/LabGuide.tsx`, navigation in `src/App.tsx` |
+
+### Lab scenario shape
+
+```ts
+{
+  id: 'pu-lab-08-example',
+  trackId: 'core-power-user',
+  title: 'Lab 8 — …',
+  summary: '…',
+  domainIds: ['pu-macros'],
+  estimatedMinutes: 30,
+  difficulty: 'intro' | 'intermediate',
+  objectives: ['…'],
+  prerequisites: ['…'],
+  environmentNotes: ['…'],
+  steps: [
+    {
+      title: 'Step title',
+      body: 'Instructions for Splunk UI or SPL.',
+      spl: 'index=splunk_learning_engine | …',  // optional
+      splBreakdown: [  // optional; explain each pipe segment
+        { segment: 'index=splunk_learning_engine', role: '…' },
+        { segment: '| stats count', role: '…' },
+      ],
+      hint: '…',              // optional
+      checkpoint: 'What the user must confirm before continuing.',
+    },
+  ],
+  verification: ['Final knowledge checks'],
+  troubleshooting: [{ problem: '…', suggestion: '…' }],  // optional
+  docLinks: [{ label: '…', url: 'https://help.splunk.com/…' }],
+}
+```
+
+### Example prompt (new lab scenario)
+
+```text
+You are extending example-splunk-learning-engine with a hands-on Splunk lab (not exam prep).
+
+Path: core-power-user
+Domain: pu-data-models
+Public docs: <help.splunk.com data models URL>
+
+Write one LabScenario object: 4–6 steps with checkpoints, optional SPL samples using index=main placeholders, objectives, verification, and docLinks. User runs this in their own Splunk. Paraphrase only; validate UI paths against Splunk Help 10.x.
+
+Output: TypeScript object matching src/data/labs/types.ts LabScenario.
+```
+
+After adding labs, wire navigation: register in `src/data/labs/index.ts`, and enable `onOpenLabGuide` from `App.tsx` for that `trackId`.
+
 ---
 
 ## TypeScript shapes (copy into prompts)
