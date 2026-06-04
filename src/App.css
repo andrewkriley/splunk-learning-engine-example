@@ -477,6 +477,21 @@ table.results td {
   margin: 0.5rem 0 0 1.5rem;
 }
 
+.lab-procedure-substeps {
+  margin: 0.5rem 0 0 1.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.lab-procedure-substeps li {
+  margin-bottom: 0.45rem;
+}
+
+.lab-procedure-substeps li:last-child {
+  margin-bottom: 0;
+}
+
 .lab-spl {
   margin: 0.5rem 0 0 1.5rem;
 }

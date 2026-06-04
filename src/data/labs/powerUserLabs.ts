@@ -241,44 +241,52 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         'Set maxspan or maxpause appropriately.',
         'Contrast transaction output with stats for session counts.',
       ],
-      prerequisites: ['A field that repeats across related events (sessionid, JSESSIONID, trace_id, etc.).'],
+      prerequisites: [
+        'Field extractions for `sessionid` (see sample-data/README.md) OR use the inline `rex` shown in step 1.',
+        'Sample data uploaded to index `splunk_learning_engine` with sourcetype `web_access`.',
+      ],
       environmentNotes: [
-        'If no session field exists, use `host` + `user` with a short maxspan only for practice—not production pattern.',
+        'If sessionid already appears in Interesting Fields, omit the rex lines in Labs 3–4 and use sessionid directly. Lab 4 still adds session_num via regex.',
+        'If no session field exists at all, use `host` + `user` with a short maxspan only for practice—not a production pattern.',
       ],
       steps: [
         {
           title: 'Find a correlation field',
-          body: 'Run a search and identify a field that ties related events (web session, transaction ID). Use stats to see cardinality.',
-          spl: 'index=splunk_learning_engine | stats dc(sessionid) AS sessions, count by sessionid | sort - count | head 10',
+          body: 'Run a search and identify a field that ties related events (web session, transaction ID). Use stats to see cardinality. The rex line ensures sessionid exists even before you save field extractions.',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "sessionid=(?<sessionid>\\S+)" | stats count by sessionid | sort - count | head 10',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine',
-              role: 'All lab web events.',
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'Limits to the main lab dataset (web_access.log).',
             },
             {
-              segment: '| stats dc(sessionid) AS sessions, count by sessionid',
-              role: 'Groups by sessionid: count = events per session; dc(sessionid) = distinct sessions (one per row, so equals 1 per group—useful pattern when grouping by other fields later).',
+              segment: '| rex field=_raw "sessionid=(?<sessionid>\\S+)"',
+              role: 'Extracts sessionid from _raw at search time so later commands can group on it.',
             },
             {
-              segment: '| sort - count',
-              role: 'Orders rows by count descending so the busiest sessions appear first.',
+              segment: '| stats count by sessionid',
+              role: 'One row per sessionid with count = events in that session—shows which sessions repeat.',
             },
             {
-              segment: '| head 10',
-              role: 'Keeps only the top 10 rows—limits output for inspection.',
+              segment: '| sort - count | head 10',
+              role: 'Top 10 busiest sessions for inspection.',
             },
           ],
-          hint: 'Swap sessionid for a field present in your data.',
+          hint: 'If this returns rows, sessionid is usable for the rest of the lab. Skip rex only if field extractions already populate sessionid.',
           checkpoint: 'You have a field with multiple events per value suitable for grouping.',
         },
         {
           title: 'Create transactions',
           body: 'Pipe to transaction with that field. Inspect eventcount and duration fields on each transaction row.',
-          spl: 'index=splunk_learning_engine | transaction sessionid maxspan=30m | table _time, sessionid, eventcount, duration',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "sessionid=(?<sessionid>\\S+)" | transaction sessionid maxspan=30m | table _time, sessionid, eventcount, duration',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine',
-              role: 'Chronological events (transaction expects time-ordered input).',
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'Lab web events in time order.',
+            },
+            {
+              segment: '| rex field=_raw "sessionid=(?<sessionid>\\S+)"',
+              role: 'Ensures sessionid is a field before transaction runs.',
             },
             {
               segment: '| transaction sessionid maxspan=30m',
@@ -295,11 +303,15 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         {
           title: 'Tune time bounds',
           body: 'Adjust maxspan or maxpause and observe how transaction count changes.',
-          spl: 'index=splunk_learning_engine | transaction sessionid maxspan=5m | stats count AS txn_count, avg(eventcount) AS avg_events',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "sessionid=(?<sessionid>\\S+)" | transaction sessionid maxspan=5m | stats count AS txn_count, avg(eventcount) AS avg_events',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine',
-              role: 'Event stream to correlate.',
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'Same lab dataset as prior steps.',
+            },
+            {
+              segment: '| rex field=_raw "sessionid=(?<sessionid>\\S+)"',
+              role: 'Same sessionid extraction—keep it consistent across the lab.',
             },
             {
               segment: '| transaction sessionid maxspan=5m',
@@ -315,29 +327,50 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         },
         {
           title: 'Compare to stats',
-          body: 'Answer the same business question with stats instead of transaction (e.g. events per session). Note when you lose per-event detail.',
-          spl: 'index=splunk_learning_engine | stats count AS events by sessionid | stats avg(events) AS avg_events_per_session',
+          body: 'Answer a similar question with stats instead of transaction: average events per session. Output is a single summary row (not a per-session table)—that is expected. Avoid aliasing count as `events`; that name breaks chained stats in Splunk.',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "sessionid=(?<sessionid>\\S+)" | stats count AS event_count by sessionid | stats avg(event_count) AS avg_events_per_session',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine',
-              role: 'Individual events.',
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'Lab events only.',
             },
             {
-              segment: '| stats count AS events by sessionid',
-              role: 'One row per sessionid with events = number of log lines in that session—no merged transaction object.',
+              segment: '| rex field=_raw "sessionid=(?<sessionid>\\S+)"',
+              role: 'sessionid must exist as a field; without rex or extractions, grouping fails silently or returns empty results.',
             },
             {
-              segment: '| stats avg(events) AS avg_events_per_session',
-              role: 'Second aggregation: single number across all sessions—the average session length in events. You lose drilldown to member events.',
+              segment: '| stats count AS event_count by sessionid',
+              role: 'One row per session with event_count = log lines in that session (no time-window merging like transaction).',
+            },
+            {
+              segment: '| stats avg(event_count) AS avg_events_per_session',
+              role: 'Collapses to one row: the mean session size across all sessions. Compare this number to avg(eventcount) from the transaction step—not txn_count.',
             },
           ],
           checkpoint:
-            'You can state one use case for transaction (drilldown to member events) vs stats alone.',
+            'You see one row (e.g. avg_events_per_session ≈ 4–8 with sample data). You can state one use case for transaction (drilldown to member events) vs stats alone.',
         },
       ],
       verification: [
         'transaction preserves member events for drilldown in the UI.',
         'maxspan limits how far apart events can be and still group.',
+      ],
+      troubleshooting: [
+        {
+          problem: 'Compare to stats returns no rows',
+          suggestion:
+            'Add the rex line (or field extractions for sessionid), use sourcetype=web_access, and rename count AS event_count—not events. Chained stats avg(events) often returns empty because events is not a safe field alias in Splunk.',
+        },
+        {
+          problem: 'Tune time bounds works but Compare to stats does not',
+          suggestion:
+            'Tune uses avg(eventcount) from transaction output; Compare uses stats on raw events and needs sessionid extracted first. Run step 1 rex, then retry with event_count alias.',
+        },
+        {
+          problem: 'Transaction returns only eventcount=1 rows',
+          suggestion:
+            'sessionid may be missing—add rex or field extractions. Widen maxspan or confirm events for the same sessionid overlap in time.',
+        },
       ],
       docLinks: [
         { label: 'About transactions', url: PU_DOCS.transactions },
@@ -350,7 +383,7 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
       summary:
         'Extract fields from _raw with rex and optionally use the Field Extractor UI for a sourcetype.',
       domainIds: ['pu-managing-fields'],
-      estimatedMinutes: 35,
+      estimatedMinutes: 45,
       difficulty: 'intermediate',
       objectives: [
         'Extract a field at search time with rex.',
@@ -360,60 +393,114 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
       prerequisites: ['Events with structured or semi-structured _raw (logs with key=value or patterns).'],
       environmentNotes: [
         'Field Extractor requires appropriate role; on Cloud, confirm knowledge object permissions.',
+        'After upload, Splunk often auto-extracts key=value fields (status, action, bytes, sessionid, etc.). This lab extracts session_num—a derived field that is not in Interesting Fields until you add a regex extraction from _raw.',
       ],
       steps: [
         {
           title: 'Inspect _raw',
-          body: 'Run a search that shows _raw. Pick a repeating pattern (IP, status code, key=value).',
-          spl: 'index=splunk_learning_engine | head 5 | table _raw',
+          body: 'Splunk may already list many fields (status, action, sessionid, bytes, …) in Interesting Fields after upload. Pick a field that is still missing—this lab extracts session_num from the sess-NNN portion of sessionid in _raw.',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table _raw, sessionid, session_num',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine',
-              role: 'All matching events (potentially thousands).',
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'Limits to the main lab file you uploaded.',
             },
             {
               segment: '| head 5',
-              role: 'Limits to the first 5 events in time order—cheap way to sample _raw for pattern spotting.',
+              role: 'Sample events—_raw contains sessionid=sess-026 style tokens.',
             },
             {
-              segment: '| table _raw',
-              role: 'Shows only the raw log line text so you can design regex extractions.',
+              segment: '| table _raw, sessionid, session_num',
+              role: 'sessionid may already be populated; session_num should be empty until you extract it—that gap is the point of this lab.',
             },
           ],
-          checkpoint: 'You identified a substring to capture as a field.',
+          checkpoint:
+            'sessionid has values; session_num is missing or empty (not in Select Fields list).',
         },
         {
           title: 'Extract with rex',
-          body: 'Use rex with a named group to populate a field at search time.',
-          spl: 'index=splunk_learning_engine | rex field=_raw "(?<http_status>\\d{3})" | stats count by http_status',
+          body: 'Pull a new field from _raw with a capture group even when sessionid already exists as a separate extracted field.',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "sessionid=sess-(?<session_num>\\d+)" | stats count by session_num',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine',
-              role: 'Events with _raw containing status codes embedded in text.',
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'Lab web events only.',
             },
             {
-              segment: '| rex field=_raw "(?<http_status>\\d{3})"',
-              role: 'Search-time extraction: named group http_status captures the first three-digit number matched in _raw (adjust regex if your format uses status=500).',
+              segment: '| rex field=_raw "sessionid=sess-(?<session_num>\\d+)"',
+              role: 'Regex captures only the numeric suffix (026, 008, …) into a new field session_num.',
             },
             {
-              segment: '| stats count by http_status',
-              role: 'Aggregates by the new field—proves extraction worked and shows distribution.',
+              segment: '| stats count by session_num',
+              role: 'Confirms session_num works—expect multiple numeric session buckets.',
             },
           ],
-          hint: 'Adjust the regex to match your log format.',
-          checkpoint: 'http_status (or your field) is populated for matching events.',
+          hint: 'If sessionid format differs, adjust the regex—keep a named capture group for the new field.',
+          checkpoint: 'stats shows multiple session_num values with counts.',
         },
         {
-          title: 'Field Extractor (UI)',
-          body: 'Settings → Fields → Field extractions → New. Choose EXTRACT via template or regex for a sourcetype. Save and re-run a search without rex in SPL.',
+          title: 'Field Extractor (UI) — save session_num',
+          body: 'Persist the session_num extraction so it applies without inline rex. You are not re-extracting sessionid—it already exists.',
+          procedureSteps: [
+            'Run: index=splunk_learning_engine sourcetype=web_access | head 20',
+            'Open **Select Fields** / Interesting Fields and confirm **session_num** is not listed (sessionid will be—that is expected).',
+            'Expand one event; open **Event Actions** → **Extract Fields** / **Extract a new field**.',
+            'In `_raw`, select the numeric part of sessionid (e.g. 026 in sessionid=sess-026) or the full sessionid=sess-026 token.',
+            'Choose **Regular expression**; set pattern to: sessionid=sess-(?<session_num>\\d+)',
+            'Validate against sample events—the highlight should cover the digits after sess- only.',
+            'On **Save**: Field name = session_num; Apply to = **sourcetype** → web_access; Type = **Search-time** / EXTRACT; App = **Search & Reporting** (or your lab app).',
+            'Save and confirm under **Settings → Knowledge → Field extractions**.',
+          ],
+          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table sessionid, session_num',
+          splBreakdown: [
+            {
+              segment: 'index=splunk_learning_engine sourcetype=web_access',
+              role: 'New search tab—no rex.',
+            },
+            {
+              segment: '| table sessionid, session_num',
+              role: 'Both columns populated: sessionid from auto/KV extraction, session_num from your new EXTRACT.',
+            },
+          ],
+          hint: 'Splunk Cloud: role must allow field extractions in the chosen app.',
           checkpoint:
-            'The field appears automatically for that sourcetype in a new search (search-time extraction).',
+            'session_num appears without rex in the search (e.g. 026, 008, 419).',
+        },
+        {
+          title: 'Verify auto-extracted fields (optional)',
+          body: 'If your upload already extracted status, action, bytes, and sessionid, you do not need duplicate EXTRACT stanzas. Confirm Labs 2–3 will work without inline rex.',
+          procedureSteps: [
+            'Run the table search below—every listed column should have values.',
+            'If **bytes** or **sessionid** is empty in your environment (unusual after KV extraction), add EXTRACT rules from sample-data/README.md.',
+            'Do not create a second extraction for fields already in Interesting Fields unless you need a different regex scope.',
+          ],
+          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table status, action, bytes, sessionid, session_num',
+          splBreakdown: [
+            {
+              segment: '| table status, action, bytes, sessionid, session_num',
+              role: 'status/action/bytes/sessionid often come from Splunk auto-extraction; session_num from your saved extraction.',
+            },
+          ],
+          checkpoint:
+            'All five columns show values on sample events (or you added missing EXTRACT rules).',
         },
         {
           title: 'Verify scope',
-          body: 'Confirm the extraction does not apply to unrelated sourcetypes (check a different sourcetype in the same index).',
+          body: 'Your session_num extraction should apply only to web_access, not legacy_web.',
+          spl: 'index=splunk_learning_engine sourcetype=legacy_web | head 3 | table sessionid, session_num',
+          splBreakdown: [
+            {
+              segment: 'index=splunk_learning_engine sourcetype=legacy_web',
+              role: 'Different sourcetype in the same index.',
+            },
+            {
+              segment: '| table sessionid, session_num',
+              role: 'session_num should be empty here until you create a legacy_web extraction—proves web_access scope.',
+            },
+          ],
+          hint: 'legacy_web uses ip_addr instead of client_ip—you will alias those in Lab 5.',
           checkpoint:
-            'Extraction is scoped correctly (sourcetype or source as intended).',
+            'web_access has session_num; legacy_web does not inherit that EXTRACT unless scope was too broad.',
         },
       ],
       verification: [

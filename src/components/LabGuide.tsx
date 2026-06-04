@@ -82,6 +82,13 @@ function LabScenarioDetail(props: {
                 <span className="lab-step-title">{step.title}</span>
               </label>
               <p className="lab-step-body">{step.body}</p>
+              {step.procedureSteps && step.procedureSteps.length > 0 && (
+                <ol className="lab-procedure-substeps">
+                  {step.procedureSteps.map((sub) => (
+                    <li key={sub}>{sub}</li>
+                  ))}
+                </ol>
+              )}
               {step.spl && (
                 <>
                   <pre className="glossary-example lab-spl">

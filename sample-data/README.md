@@ -79,22 +79,25 @@ Each line in the sample logs looks like this (fields are inside `_raw`, not sepa
 time="2026-05-22T18:00:55.858Z" host=web02 status=500 bytes=1970 sessionid=sess-026 client_ip=10.0.2.21 ...
 ```
 
-Splunk **might** show `status`, `bytes`, `host`, etc. in the left **Interesting Fields** panel after ingest—but after a plain **Upload**, they often **do not** appear until you extract them. Labs assume those fields exist for `sourcetype=web_access`.
+Splunk **often auto-extracts** key=value pairs from `_raw` on upload (status, action, bytes, sessionid, method, uri, user, client_ip, etc.). You may see 25+ fields in **Select Fields** without creating any EXTRACT rules.
 
-### Step 1 — Check whether you need to do anything
+**Lab 4** therefore practices extracting a **new derived field**—`session_num` from `sessionid=sess-026` in _raw—that will **not** appear in Interesting Fields until you add a regex extraction.
+
+### Step 1 — Check what you already have
 
 Run:
 
 ```spl
 index=splunk_learning_engine sourcetype=web_access
 | head 5
-| table _time, host, status, bytes, sessionid, client_ip
+| table status, action, bytes, sessionid, session_num
 ```
 
 | Result | What to do |
 |--------|------------|
-| Columns `status`, `bytes`, etc. have values | **Stop here**—skip to the [stats example](#example-reporting-search) below. |
-| Columns are empty or missing from the field picker | Continue to **Step 2** or **Step 3**. |
+| status, action, bytes, sessionid populated; **session_num empty** | Normal—continue to **Step 2** (Lab 4 Field Extractor uses session_num). |
+| All columns including session_num populated | You already saved an extraction—skip Lab 4 or pick another derived field. |
+| bytes or sessionid empty (rare after KV extraction) | Add EXTRACT rules in **Step 3** table below for missing fields only. |
 
 Optional quick test (search-time only, not saved):
 
@@ -109,64 +112,55 @@ If `kv` fills in the columns, fields work for that search; for labs that use pla
 
 ### Step 2 — One-off extraction in Search (Lab 4, no Settings)
 
-Use when you only need fields **in the current search** (good for learning `rex`, not required for every lab if you complete Step 3).
+Extract **session_num** even when **sessionid** already exists as a field:
 
 ```spl
 index=splunk_learning_engine sourcetype=web_access
-| rex field=_raw "status=(?<status>\d+)"
-| rex field=_raw "bytes=(?<bytes>\d+)"
-| rex field=_raw "sessionid=(?<sessionid>\S+)"
-| stats count by status
+| rex field=_raw "sessionid=sess-(?<session_num>\d+)"
+| stats count by session_num
 ```
 
-Repeat or add more `rex` lines for `host`, `user`, `method`, etc. as needed.
+If bytes or sessionid are missing in your environment (uncommon), add:
 
-### Step 3 — Persistent field extractions (recommended for all labs)
+```spl
+| rex field=_raw "bytes=(?<bytes>\d+)"
+| rex field=_raw "sessionid=(?<sessionid>\S+)"
+```
 
-Create **search-time field extractions** scoped to `sourcetype=web_access` so `status`, `bytes`, and `sessionid` exist without adding `rex` to every search.
+### Step 3 — Persistent field extractions
 
-**Splunk Enterprise or Splunk Cloud** (wording may vary slightly by version):
+Create **search-time EXTRACT** rules only for fields **not** already in Interesting Fields.
 
-1. Open **Settings** (gear) → **Knowledge** → **Field extractions** (or **Fields** → **Field extractions**).
-2. Click **New field extraction** (or **Add new**).
-3. For each field below, create one extraction (or create the three marked **required for labs** first).
+**Lab 4 wizard target:**
 
-| Field name | Regular expression (copy as-is) | Required for labs |
-|------------|----------------------------------|-------------------|
-| `status` | `status=(?<status>\d+)` | Yes |
-| `bytes` | `bytes=(?<bytes>\d+)` | Yes |
-| `sessionid` | `sessionid=(?<sessionid>\S+)` | Yes |
-| `host` | `host=(?<host>\S+)` | Helpful |
-| `client_ip` | `client_ip=(?<client_ip>\S+)` | Helpful |
-| `user` | `user=(?<user>\S+)` | Helpful |
-| `method` | `method=(?<method>\S+)` | Helpful |
-| `uri` | `uri=(?<uri>\S+)` | Helpful |
-| `action` | `action=(?<action>\S+)` | Helpful |
+| Field name | Regular expression | When needed |
+|------------|-------------------|-------------|
+| `session_num` | `sessionid=sess-(?<session_num>\d+)` | Lab 4 (derived field—not auto-extracted) |
 
-Per extraction, set:
+**Only if missing from Select Fields after upload:**
 
-- **Apply to:** `sourcetype` = `web_access` (same index you used on upload).
-- **Type / method:** **Regular expression** (or **Inline** / **EXTRACT**—not a transform that runs at index time unless you intend that).
-- **Search app context:** the app where you run labs (often **Search & Reporting** or your dev app).
+| Field name | Regular expression |
+|------------|-------------------|
+| `bytes` | `bytes=(?<bytes>\d+)` |
+| `sessionid` | `sessionid=(?<sessionid>\S+)` |
+| `status` | `status=(?<status>\d+)` |
+| `action` | `action=(?<action>\w+)` |
 
-4. **Save** each extraction.
+Per extraction, set **Apply to:** sourcetype `web_access`, type **Search-time** / EXTRACT.
 
-5. Open a **new** search (important—avoids cached field lists):
+Verify:
 
 ```spl
 index=splunk_learning_engine sourcetype=web_access
 | head 5
-| table status, bytes, sessionid
+| table sessionid, session_num, status, bytes
 ```
 
-6. Confirm values appear. Then run the reporting search below.
+**Field Extractor wizard (Lab 4):**
 
-**Using the Field Extractor wizard (alternative):**
-
-1. Run `index=splunk_learning_engine sourcetype=web_access | head 20`.
-2. Expand one event → **Event Actions** → **Extract Fields** (or **All Fields** → **Extract new fields**).
-3. Select the sample value for `status` (e.g. `500`) and choose **Regular expression**; Splunk suggests a pattern—ensure it looks like `status=(?<status>\d+)`.
-4. Save, scope to **sourcetype `web_access`**, repeat for `bytes` and `sessionid`.
+1. Confirm **session_num** is not in Select Fields (sessionid will be).
+2. **Extract Fields** on an event → regex `sessionid=sess-(?<session_num>\d+)`.
+3. Save scoped to sourcetype `web_access`.
 
 ### Step 4 — `legacy_web` sourcetype (field-alias lab only)
 
@@ -195,7 +189,8 @@ You should see counts for `200`, `404`, `500`, etc.
 | Symptom | Fix |
 |---------|-----|
 | Fields work with `rex` but not in a new plain search | Extractions not saved or wrong **sourcetype**—recheck **Apply to** = `web_access`. |
-| `status` empty but regex test matches in Field Extractor | Open a **new** search tab; confirm time range includes **22–29 May 2026** or **All time**. |
+| Many fields already in Select Fields after upload | Expected—Splunk parsed key=value from _raw. Lab 4 extracts **session_num** only. |
+| Field Extractor says field already exists | Do not re-extract status/action/sessionid; extract **session_num** with regex instead. |
 | Permission denied on Field extractions | Ask admin for `admin` or roles that allow `edit_field_extractions` (Cloud) / knowledge object edit. |
 | Only some events have fields | Regex too strict; test against `_raw` from `head 1` in Field Extractor. |
 
