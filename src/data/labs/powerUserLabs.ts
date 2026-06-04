@@ -246,7 +246,7 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
         'Sample data uploaded to index `splunk_learning_engine` with sourcetype `web_access`.',
       ],
       environmentNotes: [
-        'Steps assume `sourcetype=web_access` and a searchable `sessionid` field. If stats by sessionid return nothing, run step 1 first—it includes rex to pull sessionid from `_raw`.',
+        'If sessionid already appears in Interesting Fields, omit the rex lines in Labs 3–4 and use sessionid directly. Lab 4 still adds session_num via regex.',
         'If no session field exists at all, use `host` + `user` with a short maxspan only for practice—not a production pattern.',
       ],
       steps: [
@@ -393,12 +393,13 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
       prerequisites: ['Events with structured or semi-structured _raw (logs with key=value or patterns).'],
       environmentNotes: [
         'Field Extractor requires appropriate role; on Cloud, confirm knowledge object permissions.',
+        'After upload, Splunk often auto-extracts key=value fields (status, action, bytes, sessionid, etc.). This lab extracts session_num—a derived field that is not in Interesting Fields until you add a regex extraction from _raw.',
       ],
       steps: [
         {
           title: 'Inspect _raw',
-          body: 'Sample web logs store fields inside `_raw` as key=value pairs. Confirm the pattern before building extractions.',
-          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table _raw',
+          body: 'Splunk may already list many fields (status, action, sessionid, bytes, …) in Interesting Fields after upload. Pick a field that is still missing—this lab extracts session_num from the sess-NNN portion of sessionid in _raw.',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table _raw, sessionid, session_num',
           splBreakdown: [
             {
               segment: 'index=splunk_learning_engine sourcetype=web_access',
@@ -406,107 +407,100 @@ export const POWER_USER_LAB_GUIDE: LabGuide = {
             },
             {
               segment: '| head 5',
-              role: 'Sample five lines—enough to see repeating status=, bytes=, sessionid= patterns.',
+              role: 'Sample events—_raw contains sessionid=sess-026 style tokens.',
             },
             {
-              segment: '| table _raw',
-              role: 'Shows the full raw line text used by the Field Extractor wizard.',
+              segment: '| table _raw, sessionid, session_num',
+              role: 'sessionid may already be populated; session_num should be empty until you extract it—that gap is the point of this lab.',
             },
           ],
           checkpoint:
-            'You see lines like status=500 bytes=1970 sessionid=sess-026 in _raw.',
+            'sessionid has values; session_num is missing or empty (not in Select Fields list).',
         },
         {
           title: 'Extract with rex',
-          body: 'Practice search-time extraction in SPL before saving knowledge objects. Use the status= pattern from _raw (not a bare three-digit number).',
-          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "status=(?<status>\\d+)" | stats count by status',
+          body: 'Pull a new field from _raw with a capture group even when sessionid already exists as a separate extracted field.',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | rex field=_raw "sessionid=sess-(?<session_num>\\d+)" | stats count by session_num',
           splBreakdown: [
             {
               segment: 'index=splunk_learning_engine sourcetype=web_access',
               role: 'Lab web events only.',
             },
             {
-              segment: '| rex field=_raw "status=(?<status>\\d+)"',
-              role: 'Captures the numeric value after status= into a field named status.',
+              segment: '| rex field=_raw "sessionid=sess-(?<session_num>\\d+)"',
+              role: 'Regex captures only the numeric suffix (026, 008, …) into a new field session_num.',
             },
             {
-              segment: '| stats count by status',
-              role: 'Proves the extracted field works in aggregations (200, 404, 500, etc.).',
+              segment: '| stats count by session_num',
+              role: 'Confirms session_num works—expect multiple numeric session buckets.',
             },
           ],
-          hint: 'If empty, widen time range to All time or 22–29 May 2026 UTC.',
-          checkpoint: 'stats shows multiple status values with counts.',
+          hint: 'If sessionid format differs, adjust the regex—keep a named capture group for the new field.',
+          checkpoint: 'stats shows multiple session_num values with counts.',
         },
         {
-          title: 'Field Extractor (UI) — save status',
-          body: 'Create a persistent search-time field extraction for status so later labs do not need inline rex. Exact menu labels vary slightly by Splunk version; paths below cover Search UI and Settings.',
+          title: 'Field Extractor (UI) — save session_num',
+          body: 'Persist the session_num extraction so it applies without inline rex. You are not re-extracting sessionid—it already exists.',
           procedureSteps: [
-            'Run a sample search: index=splunk_learning_engine sourcetype=web_access | head 20',
-            'In the **Events** list, click one event row to expand it (or open the event viewer / raw event panel).',
-            'Open **Event Actions** (or the **All Fields** area) and choose **Extract Fields** / **Extract a new field**.',
-            'In the sample `_raw` text, click and drag to select the HTTP status value only (e.g. 500)—include the `status=` prefix if the wizard offers to expand the selection to the full token.',
-            'When asked for extraction method, choose **Regular expression** (recommended for status=NNN).',
-            'Confirm the regex preview matches `status=500`-style tokens. Edit to: status=(?<status>\\d+) if needed—the named group must be status.',
-            'On **Validate** / preview, confirm multiple sample events highlight correctly; click **Next** or **Continue**.',
-            'On **Save**: Field name = status; Apply to = **sourcetype** → web_access; Extraction type = **Search-time** / EXTRACT; App = **Search & Reporting** (or your lab app).',
-            'Click **Save** (or **Finish**).',
-            'Verify in **Settings → Knowledge → Field extractions** (or **Settings → Fields → Field extractions**) that a new EXTRACT named status exists for sourcetype web_access.',
+            'Run: index=splunk_learning_engine sourcetype=web_access | head 20',
+            'Open **Select Fields** / Interesting Fields and confirm **session_num** is not listed (sessionid will be—that is expected).',
+            'Expand one event; open **Event Actions** → **Extract Fields** / **Extract a new field**.',
+            'In `_raw`, select the numeric part of sessionid (e.g. 026 in sessionid=sess-026) or the full sessionid=sess-026 token.',
+            'Choose **Regular expression**; set pattern to: sessionid=sess-(?<session_num>\\d+)',
+            'Validate against sample events—the highlight should cover the digits after sess- only.',
+            'On **Save**: Field name = session_num; Apply to = **sourcetype** → web_access; Type = **Search-time** / EXTRACT; App = **Search & Reporting** (or your lab app).',
+            'Save and confirm under **Settings → Knowledge → Field extractions**.',
           ],
-          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table _time, status',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table sessionid, session_num',
           splBreakdown: [
             {
               segment: 'index=splunk_learning_engine sourcetype=web_access',
-              role: 'New search tab—no rex in the pipeline.',
+              role: 'New search tab—no rex.',
             },
             {
-              segment: '| table _time, status',
-              role: 'status column should populate automatically from the saved extraction. Empty column means save scope or regex is wrong.',
+              segment: '| table sessionid, session_num',
+              role: 'Both columns populated: sessionid from auto/KV extraction, session_num from your new EXTRACT.',
             },
           ],
-          hint: 'Splunk Cloud: you need a role that can create field extractions in the chosen app.',
+          hint: 'Splunk Cloud: role must allow field extractions in the chosen app.',
           checkpoint:
-            'table shows numeric status values without using rex in this search.',
+            'session_num appears without rex in the search (e.g. 026, 008, 419).',
         },
         {
-          title: 'Field Extractor (UI) — bytes and sessionid',
-          body: 'Repeat the same wizard for the other fields required by Labs 2–3. You can also use **Settings → Field extractions → Add new** and paste the regex directly if you prefer not to use the event wizard.',
+          title: 'Verify auto-extracted fields (optional)',
+          body: 'If your upload already extracted status, action, bytes, and sessionid, you do not need duplicate EXTRACT stanzas. Confirm Labs 2–3 will work without inline rex.',
           procedureSteps: [
-            '**bytes** — Settings → Field extractions → **Add new** (or Extract Fields on another event). Regex: bytes=(?<bytes>\\d+). Apply to sourcetype web_access. Save as field name bytes.',
-            '**sessionid** — Regex: sessionid=(?<sessionid>\\S+). Apply to sourcetype web_access. Save as field name sessionid.',
-            'Optional for later labs: host=(?<host>\\S+), user=(?<user>\\S+), method=(?<method>\\S+), client_ip=(?<client_ip>\\S+).',
-            'Confirm all three required extractions appear under Field extractions filtered by sourcetype=web_access.',
+            'Run the table search below—every listed column should have values.',
+            'If **bytes** or **sessionid** is empty in your environment (unusual after KV extraction), add EXTRACT rules from sample-data/README.md.',
+            'Do not create a second extraction for fields already in Interesting Fields unless you need a different regex scope.',
           ],
-          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table status, bytes, sessionid, host',
+          spl: 'index=splunk_learning_engine sourcetype=web_access | head 5 | table status, action, bytes, sessionid, session_num',
           splBreakdown: [
             {
-              segment: 'index=splunk_learning_engine sourcetype=web_access',
-              role: 'Tests automatic application of multiple extractions on one sourcetype.',
-            },
-            {
-              segment: '| table status, bytes, sessionid, host',
-              role: 'Each column should have values on every row—this is the minimum needed for Power User labs 2–3 without inline rex.',
+              segment: '| table status, action, bytes, sessionid, session_num',
+              role: 'status/action/bytes/sessionid often come from Splunk auto-extraction; session_num from your saved extraction.',
             },
           ],
           checkpoint:
-            'All three columns status, bytes, and sessionid show values on sample events.',
+            'All five columns show values on sample events (or you added missing EXTRACT rules).',
         },
         {
           title: 'Verify scope',
-          body: 'Extractions should apply only to web_access, not legacy_web or other sourcetypes in the same index.',
-          spl: 'index=splunk_learning_engine sourcetype=legacy_web | head 3 | table _raw, status',
+          body: 'Your session_num extraction should apply only to web_access, not legacy_web.',
+          spl: 'index=splunk_learning_engine sourcetype=legacy_web | head 3 | table sessionid, session_num',
           splBreakdown: [
             {
               segment: 'index=splunk_learning_engine sourcetype=legacy_web',
-              role: 'Different sourcetype from the same index (legacy_web.log).',
+              role: 'Different sourcetype in the same index.',
             },
             {
-              segment: '| table _raw, status',
-              role: 'status should be empty here until you create legacy_web extractions—proves web_access rules are scoped correctly.',
+              segment: '| table sessionid, session_num',
+              role: 'session_num should be empty here until you create a legacy_web extraction—proves web_access scope.',
             },
           ],
           hint: 'legacy_web uses ip_addr instead of client_ip—you will alias those in Lab 5.',
           checkpoint:
-            'web_access searches have status; legacy_web does not inherit web_access extractions unless you chose a overly broad scope.',
+            'web_access has session_num; legacy_web does not inherit that EXTRACT unless scope was too broad.',
         },
       ],
       verification: [
