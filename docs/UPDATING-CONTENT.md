@@ -65,6 +65,7 @@ Lab content is separate from multiple-choice banks. Each scenario is a guided ex
         { segment: 'index=splunk_learning_engine', role: '…' },
         { segment: '| stats count', role: '…' },
       ],
+      procedureSteps: ['…'],  // optional; numbered UI clicks for Settings/wizard flows
       hint: '…',              // optional
       checkpoint: 'What the user must confirm before continuing.',
     },

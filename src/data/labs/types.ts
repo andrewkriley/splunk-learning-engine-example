@@ -17,6 +17,8 @@ export interface LabStep {
   splBreakdown?: { segment: string; role: string }[]
   /** Optional nudge without giving away the answer */
   hint?: string
+  /** Numbered clicks/settings steps for UI-heavy procedures */
+  procedureSteps?: string[]
   /** Confirm this before advancing—hands-on checkpoint */
   checkpoint: string
 }
